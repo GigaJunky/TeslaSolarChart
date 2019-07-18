@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Tesla Solar Day Performance Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="solarchart.css"/>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div>
+        <fieldset id="controls">
+            <input type='button' id='btnDateInc' value='-' onclick='DateInc(-1)'>
+            <input type="date" id='tbStartDate'>
+            <input type='button' id='btnDateInc' value='+' onclick='DateInc(1)'>
+            <input type='button' id='btnLoad' value='Load' onclick='TeslaEnergyCmd()'>
+            <label for="cbCache" >Cache</label>
+            <input type='checkbox' id='cbCache' checked=true >
+            <br>
+            <label id="lblMsg"></label>
+        </fieldset>
+    </div>
+    <script src="ajax.js"></script>
+    <script src="utils.js"></script>
+    <script src="day.js"></script>
+</body>
+
+</html>

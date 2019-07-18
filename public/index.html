@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Proxy Server</title>
+    <link rel="stylesheet" href="solarchart.css"/>
+</head>
+<h1>Tesla Solar Energry Monitor Charts and Proxy Web Server</h1>
+<body>
+    <ul>
+        <li><a href="day.html">Day</a></li>
+        <li><a href="realtime.html">Real Time</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="SolarCityChart.html">Solar City</a></li>
+        <li><a href="http://ip-api.com/json">Geo Location</a></li>
+    </ul>
+    <p>
+         To Autorize to the Solar City web service go to your <a href="https://mysolarcity.com/#/monitoring/historical/year">mysolarcity.com powerguide</a>
+         and click the top right corner share link button and cut and paste the share url and past it below and click the autorize button.
+    </p>
+    
+    <input type="text" id="tbSCShareUrl" size="70" placeholder="insert your Tesla Solar City Share Url here once to authorize" />
+    <input type="button" value="Authorize" onclick="SCAuthorize()" />
+    <p>
+        you need to run 'Node login.js email password' to autorize access to your Tesla Account
+        Currently Tesla is ingoring the date and only sending data from the beginging of yesterday 12am.
+        Proxy Server will cache data from prior runs.
+     </p>
+    <h5><a href="https://GigaJunky.github.io">BitJunky @ GigaJunky.github.io</a></h5>
+    <h5><a href="https://github.com/GigaJunky">https://github.com/GigaJunky</a></h5>
+</body>
+<script>
+    function SCAuthorize()
+    {
+        let tbSCShareUrl = document.getElementById('tbSCShareUrl')
+        , host = window.location.href.split('/')[0]
+        , re = /^https:\/\/mysolarcity.com\/Share\/[-A-Z0-9]{36}/i
+        if(re.test(tbSCShareUrl.value))
+            window.location.href =  host + tbSCShareUrl.value
+        else
+             alert('invalid share link.   Should begin with https://mysolarcity.com/Share/ and end with 36 Alpha Numeric charaters with 4 dashes')
+    }
+</script>
+</html>

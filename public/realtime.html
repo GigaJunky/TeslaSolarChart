@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Tesla Solar City Realtime</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="solarchart.css"/>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div>
+        <fieldset id="controls">
+            <input type='button' id='btnStart' value='Start' onclick='start()'>
+            <input type='button' id='btnStop'  value='Stop'  onclick='stop()'>
+            <label>Poll Interval (seconds)</label>
+            <input type="text" id='tbIntervalSecs' value='2' size='2' />
+            <br>
+            <label id="lblMsg"></label>
+        </fieldset>
+    </div>
+    <script src="ajax.js"></script>
+    <script src="realtime.js"></script>
+</body>
+
+</html>
