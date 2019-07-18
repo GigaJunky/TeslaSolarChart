@@ -61,5 +61,5 @@ typings/
 .next
 
 #personal private solar data
-/private
-/data
+/private/*
+/data/*

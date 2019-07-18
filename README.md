@@ -30,7 +30,7 @@ For all OSs supported by NodeJS (Linux/RaspberryPi/Mac/Windows/etc...):
 
 
 1. install the lastest NodeJS [nodejs] (10.16.0 LTS is fine)
-2. extract or git clone the source code here: [github]
+2. download and extract or git clone the source code here: [github]
 3. (optionaly to show weather) register for a free DarkSky API key here: (darksky.net/dev)
 4. save your DarkSkyID in private/darkskyconfig.json formated:  (optional) get your Lat/long http://ip-api.com/json
 ```
@@ -63,6 +63,6 @@ Distributed under the MIT license. (LICENCE.txt)
 [https://github.com/GigaJunky/](https://github.com/GigaJunky/)
 
 <!-- Markdown link & img dfn's -->
-[github]: https://github.com/gigajunky
+[github]: https://github.com/GigaJunky/TeslaSolarChart.git
 [nodejs]: https://nodejs.org
 [darksky]: https://darksky.net/dev
