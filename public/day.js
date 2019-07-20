@@ -60,7 +60,8 @@ function createTCmdUrl(kind, sStartDate) {
 }
 
 function createDSdUrl(sDate) {
-    let utime = Math.round((new Date(sDate).getTime()) / 1000)
+    //let utime = Math.round((new Date(sDate).getTime()) / 1000)
+    let utime = sDate + 'T00:00:00'
     // -1 to be provided by proxyserver
     return `${urlprefix}https://api.darksky.net/forecast/${wcfg.DarkSkyID}/${wcfg.Lat},${wcfg.Long},${utime}`
 }

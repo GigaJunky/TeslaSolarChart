@@ -40,7 +40,7 @@ const requestHandler = (req, res) => {
 
     let options = { method: 'GET', host: q.hostname, port: Port, path: q.path, headers: {}, protocol: q.protocol }
     //console.log('options:', options)
-    let fn = '', m
+    let fn = '', m, groups
     switch (q.host) {
         case 'owner-api.teslamotors.com':
             //console.log('response headers: ', req.headers.authorization) //, req.headers)
@@ -57,7 +57,7 @@ const requestHandler = (req, res) => {
             if (q.query.kind === 'energy' || q.query.kind === 'power') {
                 let dd = DaysDif(q.query.date.substr(0, 10))
                 if(dd === 0) q.query.date = DateAdd(q.query.date.substr(0,10),  -1 ) //todays starts with yesterday data
-                fn = `${q.host}_${q.query.kind}_${q.query.date.substr(0, 10)}_${q.query.period}.json`.toLowerCase()
+                fn = `${q.host}_${q.query.kind}_${q.query.date.substr(0, 10)}_${q.query.period}.json`
                 // currently tesla is ingoring the date and only sending data from the beginging of yesterday 12am. so you will need to read cached data for each day prior
                 //return res.end(JSON.stringify( { error: 'no data cached' } ))
                 if (dd > 0) { //future
@@ -70,28 +70,32 @@ const requestHandler = (req, res) => {
                     if (!fs.existsSync('data/' + fn))
                         return res.end(JSON.stringify({ error: 'no data cached' }))
                 }
-
-                
-                
             }
 
             break
         case 'api.darksky.net':
-            let dsre = /(?<DarkSkyID>[0-9A-F-]*)\/(?<lat>[0-9.-]*),(?<long>[0-9.-]*),(?<utime>\d*)$/i
+            //let dsre = /(?<DarkSkyID>[0-9A-F-]*)\/(?<lat>[0-9.-]*),(?<long>[0-9.-]*),(?<utime>\d*)$/i
+            let dsre = /([0-9A-F-]*)\/([0-9.-]*),([0-9.-]*),([0-9-:TZ.]*)$/i
             m = q.pathname.match(dsre)
-            if (m.groups.DarkSkyID === '-1') { //flag to provide config from proxy server
-                q.pathname = `/forecast/${dscfg.DarkSkyID}/${dscfg.Lat || m.groups.lat},${dscfg.Long || m.groups.long},${m.groups.utime}`
+            groups = { DarkSkyID: m[1], lat: m[2], long: m[3], utime: m[4] }
+            console.log('wgroups:', groups, dscfg)
+            if (groups.DarkSkyID === '-1') { //flag to provide config from proxy server
+                q.pathname = `/forecast/${dscfg.DarkSkyID}/${dscfg.Lat},${dscfg.Long},${groups.utime.toUpperCase()}`
+                console.log('pathname: ', q.pathname)
                 options.path = q.pathname
                 m = q.pathname.match(dsre)
             }
-            let wd = new Date(m.groups.utime * 1000).toISOString().slice(0, 10)
-            fn = `${q.host}_${wd}_${m.groups.lat}_${m.groups.long}.json`.toLowerCase()
+            //let wd = new Date(groups.utime * 1000).toISOString().slice(0, 10)
+            let wd = groups.utime.slice(0, 10)
+            fn = `${q.host}_${wd}_${dscfg.Lat}_${dscfg.Long}.json`
             break
 
         case 'mysolarcity.com':
-            m = q.pathname.match(/(?<type>\w*)\/(?<installId>[0-9A-F\-]{36,36})$/i)
-            if (m && q.query.starttime) fn = `mysolarcity.com_${m.groups.type}_${q.query.starttime.slice(0, 10)}_${q.query.period}.json`
-            else if (m && m.groups.type === 'share')
+            //m = q.pathname.match(/(?<type>\w*)\/(?<installId>[0-9A-F\-]{36,36})$/i)
+            m = q.pathname.match(/(\w*)\/([0-9A-F\-]{36,36})$/i)
+            groups = {type: m[1], installId: m[2] }
+            if (m && q.query.starttime) fn = `mysolarcity.com_${groups.type}_${q.query.starttime.slice(0, 10)}_${q.query.period}.json`
+            else if (m && groups.type === 'share')
                 fn = 'SaveSolarCityConfig'
             else fn = `${q.host}${q.path}.json`
             break
