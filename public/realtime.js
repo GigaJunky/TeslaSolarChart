@@ -57,7 +57,7 @@ function getStatus() {
         } else {
             let d = r.response
             console.log(d.grid_power, r.response)
-            lblMsg.innerHTML = d.grid_power + ' ' + d.timestamp;
+            lblMsg.innerHTML =  'Grid: ' + d.grid_power + ' Solar: ' +  d.solar_power + ' Home: ' +  d.load_power + ' ' + d.timestamp;
             chartData.labels.push(labelformat(d.timestamp))
             chartData.datasets[0].data.push(d.grid_power / factor)
             chartData.datasets[1].data.push(d.solar_power / factor)

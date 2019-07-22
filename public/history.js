@@ -28,9 +28,16 @@ function getSiteID() {
     ajax(products, r => {
         let p = r.response.filter(s => s.resource_type === 'solar')
             site = p[0].energy_site_id
-        hist = `${urlprefix}https://owner-api.teslamotors.com/api/1/energy_sites/${site}/history?kind=energy&date=${getToday()}&period=week&time_zone=America/Bogota`
+        hist = `${urlprefix}https://owner-api.teslamotors.com/api/1/energy_sites/${site}/history?kind=energy&date=${getToday()}&period=${getPeriod()}&time_zone=America/Bogota`
         getHistory()
     })
+}
+
+function getPeriod(period) {
+    if(period) return period
+    let params = new URLSearchParams(location.search)
+    if (params.has('period')) return params.get('period')
+    return 'week'
 }
 
 function getHistory() {
@@ -68,5 +75,6 @@ function ChartOnClick(event, array) {
     , series = cd.datasets[dsI].label
 
     console.log(series + ':' + label + ':' + value)
+    alert(series + ':' + label + ':' + value)
     location.href = 'day.html?date=' + label
 }
