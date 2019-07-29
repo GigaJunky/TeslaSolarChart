@@ -50,7 +50,8 @@ function createCmdUrl(type, sStartDate, sEndDate) {
     return `${urlprefix}https://mysolarcity.com/solarcity-api/powerguide/v1.0/${type}/${config.DefaultInstallationGUID}?ID=${config.CustomerGUID}&IsByDevice=true&Period=Hour&StartTime=${sStartDate.substr(0,10)}T00:00:00&EndTime=${sEndDate.substr(0,10)}T23:59:59`
 }
 function createDSdUrl(sDate) {
-    let utime = Math.round((new Date(sDate).getTime()) / 1000)
+    //let utime = Math.round((new Date(sDate).getTime()) / 1000)
+    let utime = sDate + 'T00:00:00'
     // -1 to be provided by proxyserver
     return `${urlprefix}https://api.darksky.net/forecast/${wcfg.DarkSkyID}/${wcfg.Lat},${wcfg.Long},${utime}`
 }
