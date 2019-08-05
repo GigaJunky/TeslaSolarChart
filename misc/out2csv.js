@@ -14,36 +14,110 @@ if (process.argv.length < 3) {
     process.exit()
 }
 
-/*
-fs.readdirSync(datapath).forEach(f => {
-let m = f.match(/^mysolarcity.com_measurements_([0-9-]*)_hour.json$/i)
-if (m) {
-    let fdate = m[1]
-    console.log(getSolarCityDay(fdate))
+outputDateRange('te', startDate, endDate)
+//outputDateRange('sc', startDate, endDate)
+//mergeDays()
+//teEnergyWeek()
+//process.exit()
+
+function teEnergyWeek() {
+    fs.readdirSync(datapath).forEach(f => {
+        //let m = f.match(/^mysolarcity.com_measurements_([0-9-]*)_hour.json$/i)
+        let m = f.match(/^owner-api.teslamotors.com_energy_([0-9-]*)_week.json$/i)
+        if (m) {
+            let fdate = m[1]
+            console.log(fdate, f)
+            //console.log(getSolarCityDay(fdate))
+            teLoadEngeryWeek(datapath + f, fdate)
+        }
+    })
+    /*    
+    fs.readdirSync(datapath).forEach(f => {
+        if(f.endsWith('undefined')) fs.renameSync(datapath + f, datapath + f.replace('undefined',''))
+    })
+   */
 }
-})
 
-fs.readdirSync(datapath).forEach(f => {
-if(f.endsWith('undefined')) fs.renameSync(datapath + f, datapath + f.replace('undefined',''))
-})
-process.exit()
-*/
+function mergeDays() {
+    let alldays = []
+    fs.readdirSync(datapath).forEach(f => {
+        let m = f.match(/^owner-api.teslamotors.com_energy_([0-9-]*)_week.json$/i)
+        if (m) {
+            //let fdate = m[1]
+            let d = loadJsonFile(datapath + f)
+            alldays = alldays.concat(d.response.time_series)
+        }
+    })
 
-getDatesRange(startDate, endDate).forEach((d, i) => {
-    let w = getWeather(d)
-        , wd = w.daily.data[0]
-        , p = getSolarCityProductionDay(d)
-        , c = getSolarCityConsumptionDay(d)
-    , s = getTeslaEnergyDay(d)
-    console.log(d, i, p, c)
+    const filteredArr = alldays.reduce((acc, current) => {
+        if (!acc.find(i => i.timestamp === current.timestamp))
+            return acc.concat([current])
+        else return acc
+    }, [])
+
+    filteredArr.forEach((d, i) => {
+        d.timestamp = d.timestamp.substr(0, 10)
+        d.solar_energy_exported = Math.round(d.solar_energy_exported)
+        d.grid_energy_imported = Math.round(d.grid_energy_imported)
+        d.consumer_energy_imported_from_grid = Math.round(d.consumer_energy_imported_from_grid)
+        d.consumer_energy_imported_from_solar = Math.round(d.consumer_energy_imported_from_solar)
+        console.log(json2csv(d, i === 0))
+        writeJson2csv('alldays.csv', d, i === 0)
+    })
+
+
+}
+
+function teLoadEngeryWeek(fn, fdate) {
+
+    let d = loadJsonFile(fn)
+        , ts = d.response.time_series
+        , startDate = ts[0].timestamp.substr(0, 10)
+    console.log(fdate, d.response.period, ts.length, ts[0].timestamp.substr(0, 10), startDate)
+    if (startDate !== fdate) {
+        console.log(fn, datapath + `owner-api.teslamotors.com_energy_${startDate}_week.json`)
+        fs.renameSync(datapath + fn, datapath + `owner-api.teslamotors.com_energy_${startDate}_week.json`)
+    }
+    //console.log(d.response.period, ts.length, ts[0].timestamp.substr(0,10), ts[6].timestamp.substr(0,10) )
+    //ts.forEach(d => { console.log(d) })
+}
+
+function outputDateRange(mode, startDate, endDate) {
+
+    getDatesRange(startDate, endDate).forEach((d, i) => {
+        let
+            w = getWeather(d), wd = w.daily.data[0]
+            , csv
+            //, mode = 'sc' //'te'// //use solar city or tesla energy
+
+        if(mode === 'sc'){
+            let p = getSolarCityProductionDay(d)
+            , c = getSolarCityConsumptionDay(d)
+            if(p && c && w)
+            csv = PCW2PVO(d, p.TotalEnergyInIntervalkWh * 1000, c.TotalConsumptionInIntervalkWh * 1000, wd)
     
-    //let pvo = {d, p: p.TotalEnergyInIntervalkWh, c: c.TotalConsumptionInIntervalkWh, ...wd}
-    
-    let pvo =
-    {
+        }
+        else{
+            csv = getTeslaEnergyDay(d)
+            csv = PCW2PVO(csv.date, csv.solar_energy_exported, csv.consumed, wd)
+
+        }
+        console.log(d, i, csv)
+
+        if (csv !== null) {
+            console.log(json2csv(csv, i === 0))
+            writeJson2csv(outFileName, csv, i === 0)
+        }
+
+    })
+
+}
+
+function PCW2PVO(d, p, c, wd) {
+    return {
         OutputDate: d.replace(/-/g, ''),
-        Generated: p.TotalEnergyInIntervalkWh * 1000,
-        Exported: p.TotalEnergyInIntervalkWh - c.TotalConsumptionInIntervalkWh > 0 ? Math.round(p.TotalEnergyInIntervalkWh * 1000 - c.TotalConsumptionInIntervalkWh * 1000) : 0,
+        Generated: p,
+        Exported: p - c > 0 ? Math.round(p  - c ) : 0,
         PeakPower: '',
         PeakTime: '',
         Condition: '',
@@ -54,13 +128,10 @@ getDatesRange(startDate, endDate).forEach((d, i) => {
         ImportOffPeak: '',
         ImportShoulder: '',
         ImportHighShoulder: '',
-        Consumption: c.TotalConsumptionInIntervalkWh * 1000
+        Consumption: c
     }
+}
 
-    console.log(json2csv(pvo, i === 0))
-    writeJson2csv(outFileName, pvo, i === 0)
-
-})
 
 function teLoadWeek(fn) {
     let tedata = JSON.parse(fs.readFileSync(fn))
@@ -81,10 +152,26 @@ function teLoadWeek(fn) {
 function getTeslaEnergyDay(day) {
     let fn = `${datapath}owner-api.teslamotors.com_power_${day}_day.json`
     let tedata = loadJsonFile(fn)
-        , ts = tedata.response.time_series
+    if (tedata === null) return null
+    let ts = tedata.response.time_series
         , d = ts.filter(o => o.timestamp.substr(0, 10) === ts[0].timestamp.substr(0, 10))
     if (d.length !== 96) console.log('warning, not a full day of data!', d.length)
-    return teSumHours2(d)
+    return teSumHours(d)
+}
+
+function teSumHours(d) {
+    let s = {
+        date: d[0].timestamp.substr(0, 10),
+        solar_energy_exported: Sum(d.map(s => s.solar_power)) / 4,
+        grid_energy_imported: Sum(d.map(s => s.grid_power > 0 ? s.grid_power : 0)) / 4,
+        grid_energy_exported: Sum(d.map(s => s.grid_power < 0 ? s.grid_power : 0)) / 4,
+        //battery_power: Sum(d.map(s => s.battery_power)) / 4,
+        //grid_services_power: Sum(d.map(s => s.grid_services_power)) / 4
+    }
+    s.consumed = s.solar_energy_exported + s.grid_energy_imported + s.grid_energy_exported
+    s.consumed_from_solar = s.solar_energy_exported + s.grid_energy_exported
+    s.consumed_from_grid = s.grid_energy_imported
+    return s
 }
 
 function teSumHours2(d) {
@@ -109,7 +196,8 @@ function teSumHours1(d) {
 function getSolarCityConsumptionDay(date) {
     let fn = datapath + `mysolarcity.com_consumption_${date}_hour.json`
     let c = loadJsonFile(fn)
-    if (c === null || !c.Consumption || c.Consumption.length !== 24) {
+    if (c === null) return null
+    if (!c.Consumption || c.Consumption.length !== 24) {
         console.log(fn + '.invalid.txt renamed', c.Consumption.length)
         fs.renameSync(fn, fn + '.invalid.txt')
         return null
@@ -122,11 +210,17 @@ function getSolarCityProductionDay(date) {
     let fn = datapath + `mysolarcity.com_measurements_${date}_hour.json`
         , p = loadJsonFile(fn)
     if (p === null) return null
-    let d0 = p.Devices[0].Measurements.length
-        , d1 = p.Devices[1].Measurements.length
-        , bPValid = d0 === 24 || d1 === 24
+    let bPValid = false
+
+    if (p.Devices && p.Devices.length > 1) {
+        let d0 = p.Devices[0].Measurements.length
+            , d1 = p.Devices[1].Measurements.length
+
+        bPValid = d0 === 24 || d1 === 24
+    }
+
     if (!bPValid) {
-        console.log(fn + '.invalid.txt renamed', d0, d1)
+        console.log(fn + '.invalid.txt renamed')
         fs.renameSync(fn, fn + '.invalid.txt')
         return null
     }
@@ -184,11 +278,12 @@ function json2csv1(j, bHeader) {
 }
 
 function json2csv(j, bHeader) {
+    if (!j) return j
     let v = bHeader ? Object.keys(j) : Object.values(j)
     return v.join(',')
 }
 
-function isEmpty(obj) { return Object.entries(obj).length === 0 && obj.constructor === Object }
+function isEmpty(obj) { return obj && Object.entries(obj).length === 0 && obj.constructor === Object }
 
 function loadJsonFile(fn) {
     if (!fs.existsSync(fn)) {
