@@ -3,19 +3,25 @@ const fs = require('fs')
     , wcfg = require('../private/darkskyconfig.json')
     , datapath = '../data/'
 let
-    startDate = process.argv[2]
-    , endDate = process.argv[3]
-    , outFileName = process.argv[4]
+    mode = process.argv[2]
+    startDate = process.argv[3]
+    , endDate = process.argv[4]
+    , outFileName = process.argv[5]
 if (!startDate) startDate = new Date().toISOString().substr(0, 10)
 if (!endDate) endDate = startDate
 
-if (process.argv.length < 3) {
-    console.log('out2csv startDate endDate')
+if (process.argv.length < 4) {
+    console.log('out2csv te|sc startDate endDate')
+    process.exit()
+}
+if(mode !=='te' && mode !=='sc'){
+    console.log('mode must be te or sc for Telsa Engery or Solar City')
     process.exit()
 }
 
-outputDateRange('te', startDate, endDate)
-//outputDateRange('sc', startDate, endDate)
+
+//outputDateRange('te', startDate, endDate)
+outputDateRange(mode, startDate, endDate)
 //mergeDays()
 //teEnergyWeek()
 //process.exit()
@@ -84,10 +90,12 @@ function teLoadEngeryWeek(fn, fdate) {
 
 function outputDateRange(mode, startDate, endDate) {
 
+    let alldays = []
     getDatesRange(startDate, endDate).forEach((d, i) => {
         let
-            w = getWeather(d), wd = w.daily.data[0]
-            , csv
+            w = getWeather(d)
+            , csv, wd
+             if(w) wd = w.daily.data[0]
             //, mode = 'sc' //'te'// //use solar city or tesla energy
 
         if(mode === 'sc'){
@@ -99,17 +107,30 @@ function outputDateRange(mode, startDate, endDate) {
         }
         else{
             csv = getTeslaEnergyDay(d)
-            csv = PCW2PVO(csv.date, csv.solar_energy_exported, csv.consumed, wd)
+            //console.log(csv)
+            //if(csv) csv = PCW2PVO(csv.date, csv.solar_energy_exported, csv.consumed, wd)
 
         }
-        console.log(d, i, csv)
+        //console.log(d, i, csv)
 
         if (csv !== null) {
-            console.log(json2csv(csv, i === 0))
+            if(csv) alldays.push(csv)
+            //console.log(json2csv(csv, i === 0))
             writeJson2csv(outFileName, csv, i === 0)
         }
 
     })
+    alldays = alldays.sort((a, b)=> b.Generated-a.Generated)
+    console.log('Highest Generated:', alldays[0].OutputDate, alldays[0].Generated)
+    console.log('Highest Generated:', alldays[1].OutputDate, alldays[1].Generated)
+    console.log('Highest Generated:', alldays[2].OutputDate, alldays[2].Generated)
+    let last = alldays.length
+    console.log('Lowest Generated 1:',  alldays[last-1].OutputDate, alldays[last-1].Generated)
+    console.log('Lowest Generated 2:',  alldays[last-2].OutputDate, alldays[last-2].Generated)
+    console.log('Lowest Generated 3:',  alldays[last-3].OutputDate, alldays[last-3].Generated)
+
+
+    fs.writeFileSync('alldays.json', JSON.stringify(alldays))
 
 }
 
@@ -198,7 +219,7 @@ function getSolarCityConsumptionDay(date) {
     let c = loadJsonFile(fn)
     if (c === null) return null
     if (!c.Consumption || c.Consumption.length !== 24) {
-        console.log(fn + '.invalid.txt renamed', c.Consumption.length)
+        console.log(fn + '.invalid.txt renamed') //, c.Consumption.length)
         fs.renameSync(fn, fn + '.invalid.txt')
         return null
     }
