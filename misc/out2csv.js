@@ -2,6 +2,12 @@
 const fs = require('fs')
     , wcfg = require('../private/darkskyconfig.json')
     , datapath = '../data/'
+
+    //teGetPeekHour(process.argv[2])
+    //console.log(getAlldaysPeekHour())
+    teLoadEngeryWeek(process.argv[2])
+    process.exit()
+
 let
     mode = process.argv[2]
     startDate = process.argv[3]
@@ -26,6 +32,79 @@ outputDateRange(mode, startDate, endDate)
 //teEnergyWeek()
 //process.exit()
 
+function getAlldaysPeekHour()
+{
+    //let redarksky = /^api.darksky.net_([0-9-]*)_41.71_-88.json$/i
+    //let rescmh = /^mysolarcity.com_measurements_([0-9-]*)_hour.json$/i
+    let retePowerDay = /^owner-api.teslamotors.com_power_([0-9-]*)_day.json$/i
+    let alldays = []
+    getDaysfromDir(retePowerDay).forEach(d => {
+        let ph = teGetPeekHour(d)
+        if(ph) alldays.push(ph)
+    })
+    let sort = alldays.sort((a, b)=> b.solar_power.solar_power-a.solar_power.solar_power)
+    return sort
+
+}
+
+function getDaysfromDir(re) {
+    let alldays = []
+    fs.readdirSync(datapath).forEach(f => {
+        let m = f.match(re)
+        if (m) alldays.push(m[1])
+    })
+    return alldays
+}
+
+function teGetPeekHour(day)
+{
+    let d = LoadTeslaEnergyDay(day)
+    if(!d) return null
+    let d24 = Measureto24HoursTE2(d)
+    let sort = d.sort((a, b)=> b.solar_power-a.solar_power)
+    let solar_power_max = sort[0]
+    sort = d.sort((a, b)=> b.grid_power-a.grid_power)
+    return {
+        solar_power: solar_power_max,
+        grid_power: sort[0],
+        grid_power_low: sort[23],
+    }
+}
+
+function Measureto24HoursTE2(a) {
+    ts = []
+    for (let h = 0; h < 24; h++) {
+        let o = a.filter(o => new Date(o.timestamp).getHours() === h)
+        if (o.length > 0) {
+            ts.push({
+                timestamp: o[0].timestamp,
+                solar_power: Sum(o.map(s => s.solar_power))/4,
+                grid_power: Sum(o.map(s => s.grid_power))/4,
+                //battery_power: Sum(o.map(s => s.battery_power))/4,
+                //grid_services_power: Sum(o.map(s => s.grid_services_power))/4
+            })
+        }
+    }
+    return  ts 
+}
+
+
+function Measureto24HoursTE(a) {
+    let sp = []
+    let gp = []
+    for (let h = 0; h < 24; h++) {
+        let o = a.filter(o => new Date(o.timestamp).getHours() === h)
+        if (o.length > 0) {
+            let s = Sum(o.map(s => s.solar_power))
+            let g = Sum(o.map(s => s.grid_power))
+            sp[h] = s / 4 / 1000
+            gp[h] = g / 4 / 1000
+        }
+    }
+    return { day: a[0].timestamp, e: [sp], c: gp }
+}
+
+
 function teEnergyWeek() {
     fs.readdirSync(datapath).forEach(f => {
         //let m = f.match(/^mysolarcity.com_measurements_([0-9-]*)_hour.json$/i)
@@ -34,7 +113,7 @@ function teEnergyWeek() {
             let fdate = m[1]
             console.log(fdate, f)
             //console.log(getSolarCityDay(fdate))
-            teLoadEngeryWeek(datapath + f, fdate)
+            teLoadEngeryWeek(fdate)
         }
     })
     /*    
@@ -74,16 +153,20 @@ function mergeDays() {
 
 }
 
-function teLoadEngeryWeek(fn, fdate) {
-
-    let d = loadJsonFile(fn)
+function teLoadEngeryWeek(fdate) {
+   
+    let d = loadJsonFile(`${datapath}owner-api.teslamotors.com_energy_${fdate}_week.json`)
         , ts = d.response.time_series
         , startDate = ts[0].timestamp.substr(0, 10)
-    console.log(fdate, d.response.period, ts.length, ts[0].timestamp.substr(0, 10), startDate)
+        , endDate = ts[ts.length-1].timestamp.substr(0, 10)
+    console.log( d.response.period, ts.length, fdate, startDate, endDate)
+    console.log(Sum(ts.map(s => s.solar_energy_exported)) / ts.length)
+    /*
     if (startDate !== fdate) {
         console.log(fn, datapath + `owner-api.teslamotors.com_energy_${startDate}_week.json`)
         fs.renameSync(datapath + fn, datapath + `owner-api.teslamotors.com_energy_${startDate}_week.json`)
     }
+    */
     //console.log(d.response.period, ts.length, ts[0].timestamp.substr(0,10), ts[6].timestamp.substr(0,10) )
     //ts.forEach(d => { console.log(d) })
 }
@@ -169,15 +252,26 @@ function teLoadWeek(fn) {
     })
 }
 
-
-function getTeslaEnergyDay(day) {
+function LoadTeslaEnergyDay(day) {
     let fn = `${datapath}owner-api.teslamotors.com_power_${day}_day.json`
     let tedata = loadJsonFile(fn)
-    if (tedata === null) return null
+    if (!tedata || !tedata.response) return null
+
     let ts = tedata.response.time_series
         , d = ts.filter(o => o.timestamp.substr(0, 10) === ts[0].timestamp.substr(0, 10))
-    if (d.length !== 96) console.log('warning, not a full day of data!', d.length)
+    if (d.length !== 96){
+        console.log('warning, not a full day of data!', d.length, day)
+        return null        
+    }
+    return d
+}
+
+
+function getTeslaEnergyDay(day) {
+    let d = LoadTeslaEnergyDay(day)
+    if (d === null) return null
     return teSumHours(d)
+    
 }
 
 function teSumHours(d) {
