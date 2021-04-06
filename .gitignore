@@ -63,3 +63,6 @@ typings/
 #personal private solar data
 /private/*
 /data/*
+misc/data/*
+misc/*.csv
+misc/*.json

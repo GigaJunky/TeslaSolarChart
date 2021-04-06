@@ -22,13 +22,14 @@ let site, live_status, urlprefix = location.protocol + '//' + location.host + '/
     }
     ,myChart = new Chart(ctx, chartData)
 
+tbStartDate.value = getToday()    
 getSiteID()
 
 function getSiteID() {
     ajax(products, r => {
         let p = r.response.filter(s => s.resource_type === 'solar')
             site = p[0].energy_site_id
-        hist = `${urlprefix}https://owner-api.teslamotors.com/api/1/energy_sites/${site}/history?kind=energy&date=${getToday()}&period=${getPeriod()}&time_zone=America/Bogota`
+        hist = `${urlprefix}https://owner-api.teslamotors.com/api/1/energy_sites/${site}/history?kind=energy&date=${getDate(tbStartDate.value)}&period=${getPeriod()}&time_zone=America/Bogota`
         getHistory()
     })
 }
@@ -40,17 +41,30 @@ function getPeriod(period) {
     return 'week'
 }
 
+function getDate(date) {
+    if(date) return date
+    let params = new URLSearchParams(location.search)
+    if (params.has('date')) return params.get('date')
+    return getToday()
+}
+
+
 function getHistory() {
     const factor = 1000
+    hist = `${urlprefix}https://owner-api.teslamotors.com/api/1/energy_sites/${site}/history?kind=energy&date=${getDate(tbStartDate.value)}&period=${getPeriod()}&time_zone=America/Bogota`
+
     ajax(hist, r => {
         console.log(r)
         if (r.error) {
             lblMsg.innerHTML = r.error
         } else {
             let ts = r.response.time_series
-            lblMsg.innerHTML = r.response.period;
+            lblMsg.innerHTML = r.response.period
+            let cd = chartData.data
+            cd.labels = []
+            cd.datasets.forEach(ds => {  ds.data = [] })
+            myChart.update()
             ts.forEach(i => {
-                let cd = chartData.data
                 cd.labels.push(i.timestamp.slice(0, 10))
                 cd.datasets[0].data.push(Math.round(i.consumer_energy_imported_from_grid + i.consumer_energy_imported_from_solar) / factor) // home usage
                 cd.datasets[1].data.push(Math.round(i.solar_energy_exported) / factor) //solar generated
@@ -77,4 +91,9 @@ function ChartOnClick(event, array) {
     console.log(series + ':' + label + ':' + value)
     alert(series + ':' + label + ':' + value)
     location.href = 'day.html?date=' + label
+}
+
+function DateInc(days) {
+    tbStartDate.value =  DateAdd(tbStartDate.value, days)
+    getHistory()
 }

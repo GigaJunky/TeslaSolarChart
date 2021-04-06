@@ -10,7 +10,16 @@
 <body style='background-color: black'>
     <canvas id="canvas"></canvas>
     <div>
-        <label id="lblMsg"></label>
+        <fieldset id="controls">
+            <input type='button' id='btnDateInc' value='-' onclick='DateInc(-1)'>
+            <input type="date" id='tbStartDate'>
+            <input type='button' id='btnDateInc' value='+' onclick='DateInc(1)'>
+            <input type='button' id='btnLoad' value='Load' onclick='getHistory()'>
+            <label for="cbCache" >Cache</label>
+            <input type='checkbox' id='cbCache' checked=true >
+            <br>
+            <label id="lblMsg"></label>
+        </fieldset>
     </div>
     <script src="ajax.js"></script>
     <script src="utils.js"></script>
